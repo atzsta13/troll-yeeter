@@ -2,13 +2,19 @@ import Phaser from 'phaser';
 
 class GameScene extends Phaser.Scene {
   private mod!: Phaser.GameObjects.Rectangle;
-  private troll!: Phaser.GameObjects.Arc & { body: Phaser.Physics.Arcade.Body };
+  private troll!: Phaser.Physics.Arcade.Sprite;
   private rope!: Phaser.GameObjects.Graphics;
   private upvotes!: Phaser.Physics.Arcade.Group;
+  private trollParticles!: Phaser.GameObjects.Particles.ParticleEmitter;
+
+  // Helper cast
+  get tBody() { return this.troll.body as Phaser.Physics.Arcade.Body; }
+
+
   private state: 'IDLE' | 'SPINNING' | 'FLYING' | 'GAME_OVER' = 'IDLE';
   private angleVal: number = 0;
   private radius: number = 100;
-  private rotationSpeed: number = 0.05; // Slower spin
+  private rotationSpeed: number = 0.05;
   private power: number = 1500;
   private scoreText!: Phaser.GameObjects.Text;
   private maxScore: number = 0;
@@ -21,100 +27,112 @@ class GameScene extends Phaser.Scene {
     super({ key: 'GameScene' });
   }
 
-  create() {
-    const { width, height } = this.scale;
+  createAssets() {
+    const generateEmojiTexture = (key: string, emoji: string, fontSize: string = '64px') => {
+      if (!this.textures.exists(key)) {
+        const text = this.make.text({
+          style: { fontSize: fontSize, fontFamily: 'Arial' },
+          text: emoji,
+          add: false
+        });
+        text.setOrigin(0.5);
 
-    // 0. Visuals: Sky Gradient
-    this.createSky();
+        const w = text.width || 64;
+        const h = text.height || 64;
+        const rt = this.make.renderTexture({ width: w, height: h });
+        rt.draw(text, w / 2, h / 2);
+        rt.saveTexture(key);
+        text.destroy();
+      }
+    };
 
-    // 1. Setup World
-    this.physics.world.setBounds(0, -50000, width, height + 50000);
-    this.physics.world.checkCollision.up = false;
-    this.physics.world.checkCollision.down = true;
-    this.physics.world.checkCollision.left = true;
-    this.physics.world.checkCollision.right = true;
-    this.physics.world.gravity.y = 400; // Reduced gravity more
+    generateEmojiTexture('mod_texture', '🗿');
+    generateEmojiTexture('troll_texture', '🧌');
+    generateEmojiTexture('upvote_texture', '🚀');
+    generateEmojiTexture('star_texture', '✨', '32px');
+    generateEmojiTexture('cloud_texture', '☁️', '128px');
+  }
 
-    // 2. Actors
-    this.mod = this.add.rectangle(width / 2, height - 100, 40, 60, 0x0079D3);
-    this.physics.add.existing(this.mod, true);
-
-    this.troll = this.add.circle(width / 2, height - 100, 15, 0xFF4500) as any;
-    this.physics.add.existing(this.troll);
-    this.troll.body.setCircle(15);
-    this.troll.body.setBounce(0.5);
-    this.troll.body.setCollideWorldBounds(true);
-    this.troll.body.setAllowGravity(false);
-    this.troll.body.setDragX(0); // Reset drag
-
-    this.rope = this.add.graphics();
-
-    // 3. Upvotes
-    this.createUpvoteTexture();
-    this.upvotes = this.physics.add.group();
-    this.generateUpvotes();
-
-    // 4. Score
-    this.scoreText = this.add.text(20, 20, 'Score: 0', {
-      fontFamily: 'Verdana',
-      fontSize: '24px',
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 2
-    }).setScrollFactor(0).setDepth(100);
-
-    // 5. Version
-    this.add.text(width - 20, 20, 'v0.7', {
-      fontFamily: 'Verdana',
-      fontSize: '16px',
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 2
-    }).setScrollFactor(0).setDepth(100).setOrigin(1, 0);
-
-    // 6. Input
-    this.input.on('pointerdown', this.handleInput, this);
-
-    // 6. Collisions
-    this.physics.add.overlap(this.troll, this.upvotes, this.handleUpvoteCollision, undefined, this);
-
-    // 7. UI - Game Over Screen (Hidden initially)
-    this.createGameOverUI();
+  createDecorations() {
+    for (let i = 0; i < 20; i++) {
+      const x = Phaser.Math.Between(0, this.scale.width);
+      const y = Phaser.Math.Between(-40000, this.scale.height - 200);
+      const cloud = this.add.image(x, y, 'cloud_texture');
+      cloud.setAlpha(0.3);
+      cloud.setScale(Phaser.Math.FloatBetween(0.8, 2.0));
+      cloud.setDepth(-0.5);
+    }
   }
 
   createSky() {
     const { width, height } = this.scale;
     const skyHeight = 50000 + height;
     const graphics = this.add.graphics();
-    graphics.fillGradientStyle(0x000000, 0x000000, 0x87CEEB, 0x87CEEB, 1);
+    graphics.fillGradientStyle(0x000020, 0x000020, 0x87CEEB, 0x87CEEB, 1);
     graphics.fillRect(0, -50000, width, skyHeight);
     graphics.setDepth(-1);
   }
 
-  createUpvoteTexture() {
-    if (!this.textures.exists('upvote')) {
-      const graphics = this.make.graphics({ x: 0, y: 0 }, false);
-      graphics.fillStyle(0xFF4500, 1);
-      graphics.lineStyle(2, 0xFFFFFF, 1);
+  create() {
+    const { width, height } = this.scale;
 
-      // Draw Upvote Arrow shape (approx 40x40)
-      // Center is roughly 20,20
-      graphics.beginPath();
-      graphics.moveTo(0, 20);   // Left point of head
-      graphics.lineTo(20, 0);   // Top tip
-      graphics.lineTo(40, 20);  // Right point of head
-      graphics.lineTo(30, 20);  // Indent right
-      graphics.lineTo(30, 40);  // Stem right bottom
-      graphics.lineTo(10, 40);  // Stem left bottom
-      graphics.lineTo(10, 20);  // Indent left
-      graphics.closePath();
+    this.createAssets();
+    this.createSky();
+    this.createDecorations();
 
-      graphics.fillPath();
-      graphics.strokePath();
+    this.physics.world.setBounds(0, -50000, width, height + 50000);
+    this.physics.world.checkCollision.up = false;
+    this.physics.world.checkCollision.down = true;
+    this.physics.world.checkCollision.left = true;
+    this.physics.world.checkCollision.right = true;
+    this.physics.world.gravity.y = 400;
 
-      graphics.generateTexture('upvote', 40, 42);
-      graphics.destroy();
-    }
+    // Actors
+    this.mod = this.add.rectangle(width / 2, height - 100, 40, 60, 0x000000, 0);
+    this.add.sprite(width / 2, height - 100, 'mod_texture').setScale(0.8);
+    this.physics.add.existing(this.mod, true);
+
+    // Troll
+    this.troll = this.physics.add.sprite(width / 2, height - 100, 'troll_texture').setScale(0.6);
+    this.tBody.setCircle(25);
+    this.tBody.setBounce(0.5);
+    this.tBody.setCollideWorldBounds(true);
+    this.tBody.setAllowGravity(false);
+    this.tBody.setDragX(0);
+
+    // Trail
+    this.trollParticles = this.add.particles(0, 0, 'star_texture', {
+      speed: 10,
+      scale: { start: 0.5, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 600,
+      follow: this.troll,
+      blendMode: 'ADD'
+    });
+    this.trollParticles.stop();
+
+    this.rope = this.add.graphics();
+
+    // Upvotes
+    this.upvotes = this.physics.add.group();
+    this.generateUpvotes();
+
+    // Score & Version
+    this.scoreText = this.add.text(20, 20, 'Score: 0', {
+      fontFamily: 'Verdana', fontSize: '28px', color: '#ffffff',
+      stroke: '#000000', strokeThickness: 4,
+      shadow: { blur: 2, color: '#000000', fill: true }
+    }).setScrollFactor(0).setDepth(100);
+
+    this.add.text(width - 20, 20, 'v1.0', {
+      fontFamily: 'Verdana', fontSize: '16px', color: '#ffffff',
+      stroke: '#000000', strokeThickness: 2
+    }).setScrollFactor(0).setDepth(100).setOrigin(1, 0);
+
+    // Input
+    this.input.on('pointerdown', this.handleInput, this);
+    this.physics.add.overlap(this.troll, this.upvotes, this.handleUpvoteCollision, undefined, this);
+    this.createGameOverUI();
   }
 
   generateUpvotes() {
@@ -128,10 +146,11 @@ class GameScene extends Phaser.Scene {
         const isLeft = Math.random() > 0.5;
         const x = isLeft ? 40 : width - 40;
 
-        const upvote = this.upvotes.create(x, y, 'upvote');
+        const upvote = this.upvotes.create(x, y, 'upvote_texture');
         upvote.body.setAllowGravity(false);
         upvote.body.setImmovable(true);
         if (!isLeft) upvote.setFlipX(true);
+        upvote.setScale(0.8);
       }
     }
   }
@@ -152,14 +171,14 @@ class GameScene extends Phaser.Scene {
     if (!upvote.body || !upvote.body.enable) return;
     upvote.disableBody(true, false);
 
-    const currentVel = this.troll.body.velocity.y;
-    // Boost UP - ensuring we don't just stop falling, but shoot up
-    // If falling (vel > 0), simple subtraction might not be enough if falling fast.
-    // Let's set a hard velocity.
+    // Ensure body exists before accessing velocity
+    if (!this.tBody) return;
+
+    const currentVel = this.tBody.velocity.y;
     if (currentVel > 0) {
-      this.troll.body.setVelocityY(-1200); // Hard bounce back up
+      this.tBody.setVelocityY(-1200);
     } else {
-      this.troll.body.setVelocityY(currentVel - 800); // Add speed
+      this.tBody.setVelocityY(currentVel - 800);
     }
 
     this.tweens.add({
@@ -173,14 +192,18 @@ class GameScene extends Phaser.Scene {
   }
 
   override update(_time: number, _delta: number) {
+    // Safety check
+    if (!this.tBody) return;
+
     if (this.state === 'IDLE') {
-      this.troll.body.reset(this.mod.x, this.mod.y);
-      this.troll.body.setAllowGravity(false);
-      this.troll.body.setVelocity(0, 0);
+      this.tBody.reset(this.mod.x, this.mod.y);
+      this.tBody.setAllowGravity(false);
+      this.tBody.setVelocity(0, 0);
       this.rope.clear();
       this.angleVal = -Math.PI / 2;
       this.maxScore = 0;
       this.scoreText.setText('Score: 0');
+      this.trollParticles.stop();
 
     } else if (this.state === 'SPINNING') {
       this.angleVal += this.rotationSpeed;
@@ -198,9 +221,6 @@ class GameScene extends Phaser.Scene {
     } else if (this.state === 'FLYING') {
       this.rope.clear();
 
-      // Update Score
-      // Base height is scale.height - 100. Troll Y decreases as it goes up.
-      // Distance = Base - TrollY
       const startY = this.scale.height - 100;
       const dist = startY - this.troll.y;
 
@@ -212,24 +232,13 @@ class GameScene extends Phaser.Scene {
         }
       }
 
-      // Camera Follow logic: Only follow if we are going UP (or near peak)
-      // If user wants to see the fall, we follow. But prompt said "do not downgrade score".
-      // Score logic is fixed above (only updates if > maxScore).
-      // Camera: Let's follow on the way down too, so we see when we hit the ground.
-      // Reset logic handles the game over.
-
-      // Reset Condition: Collides with Bottom (Floor)
-      if (this.troll.body.blocked.down) {
-        // Apply friction to slow down horizontal slide
-        this.troll.body.setDragX(500);
-
-        // Only end game when truly stopped
-        if (Math.abs(this.troll.body.velocity.y) < 10 && Math.abs(this.troll.body.velocity.x) < 10) {
+      if (this.tBody.blocked.down) {
+        this.tBody.setDragX(500);
+        if (Math.abs(this.tBody.velocity.y) < 10 && Math.abs(this.tBody.velocity.x) < 10) {
           this.gameOver();
         }
       } else {
-        // In air? No drag.
-        this.troll.body.setDragX(0);
+        this.tBody.setDragX(0);
       }
     }
   }
@@ -246,18 +255,20 @@ class GameScene extends Phaser.Scene {
 
   launchTroll() {
     this.state = 'FLYING';
-    this.troll.body.enable = true;
-    this.troll.body.setAllowGravity(true);
+    this.tBody.enable = true;
+    this.tBody.setAllowGravity(true);
     const vx = Math.cos(this.angleVal - Math.PI / 2) * this.power;
     const vy = Math.sin(this.angleVal - Math.PI / 2) * this.power;
-    this.troll.body.setVelocity(vx, vy);
+    this.tBody.setVelocity(vx, vy);
     this.cameras.main.startFollow(this.troll, true, 0, 0.5);
+    this.trollParticles.start();
   }
 
   gameOver() {
     this.state = 'GAME_OVER';
-    this.troll.body.setVelocity(0, 0); // Stop physics
+    if (this.tBody) this.tBody.setVelocity(0, 0);
     this.cameras.main.stopFollow();
+    this.trollParticles.stop();
 
     this.finalScoreText.setText(`Final Score: ${this.maxScore}`);
     this.gameOverContainer.setVisible(true);
@@ -266,20 +277,10 @@ class GameScene extends Phaser.Scene {
 
   resetGame() {
     this.state = 'IDLE';
-
-    // UI Reset
     this.gameOverContainer.setVisible(false);
     this.scoreText.setVisible(true);
-
-    // Camera Reset
-    // We need to snap back to the bottom.
-    // Since we used startFollow, unsetting it and setting scroll works.
-    this.cameras.main.setScroll(0, 0); // Mod is at 0,0 relative to initial cam viewport?
-    // Wait, mod is at height-100.
-    // Initial camera scroll is 0.
-    // Yes.
-
-    this.troll.body.setVelocity(0, 0);
+    this.cameras.main.setScroll(0, 0);
+    if (this.tBody) this.tBody.setVelocity(0, 0);
     this.upvotes.clear(true, true);
     this.generateUpvotes();
   }
@@ -290,11 +291,11 @@ const config: Phaser.Types.Core.GameConfig = {
   width: window.innerWidth,
   height: window.innerHeight,
   parent: 'game-container',
-  backgroundColor: '#87CEEB', // Default sky blue
+  backgroundColor: '#87CEEB',
   physics: {
     default: 'arcade',
     arcade: {
-      gravity: { x: 0, y: 800 },
+      gravity: { x: 0, y: 400 },
       debug: false,
     },
   },
