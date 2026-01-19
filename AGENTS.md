@@ -1,5 +1,9 @@
 You are writing a Devvit web application that will be executed on Reddit.com. To learn more about Devvit, use the devvit-mcp if configured or go to https://developers.reddit.com/docs/llms.txt.
 
+## Agent Directives
+
+- Document everything you do in markdown files so all the other models also benefit from your work.
+
 ## Tech Stack
 
 - **Frontend**: React 19, Tailwind CSS 4, Vite
