@@ -1,1 +1,11 @@
-@import 'tailwindcss';
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-white font-sans antialiased overflow-hidden;
+  }
+}
