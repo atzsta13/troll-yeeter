@@ -115,23 +115,32 @@ class GameScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const startY = height - 500;
     const endY = -50000;
-    const gap = 300; // More frequent boosts
+    const gap = 300;
 
     for (let y = startY; y > endY; y -= gap) {
+      // 50% chance to spawn, but now only on sides
       if (Math.random() > 0.4) {
-        const x = Phaser.Math.Between(50, width - 50);
+        const isLeft = Math.random() > 0.5;
+        const x = isLeft ? 40 : width - 40;
+
         const upvote = this.upvotes.create(x, y, 'upvote');
         upvote.body.setAllowGravity(false);
         upvote.body.setImmovable(true);
-        // Add a slight wobble for "juice"
-        this.tweens.add({
-          targets: upvote,
-          y: y - 10,
-          duration: 1500,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        });
+
+        // Face inward? or Up?
+        // Original seals face inward. 
+        // Upvote arrow points UP.
+        // Let's just keep them pointing up for clarity that they boost UP.
+        // Maybe slight rotation inward?
+        // Let's keep it simple: Point UP. 
+
+        // Flip sprite if on right side
+        if (!isLeft) {
+          upvote.setFlipX(true);
+        }
+
+        // Remove the tween that was causing "moving faster and faster" weirdness.
+        // Static is better for precision.
       }
     }
   }
