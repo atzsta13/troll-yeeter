@@ -19,8 +19,11 @@ class GameScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
 
+    // 0. Visuals: Sky Gradient
+    this.createSky();
+
     // 1. Setup World
-    this.physics.world.setBounds(0, 0, width, height);
+    this.physics.world.setBounds(0, -50000, width, height + 50000); // Allow going way up
     this.physics.world.checkCollision.up = false;
     this.physics.world.checkCollision.down = true;
     this.physics.world.checkCollision.left = true;
@@ -28,30 +31,34 @@ class GameScene extends Phaser.Scene {
 
     // 2. Actors
     // The Mod (Anchor) - Blue Rectangle
-    this.mod = this.add.rectangle(width / 2, height - 100, 30, 50, 0x0000ff);
-    this.physics.add.existing(this.mod, true); // Static body
+    // Fixed at { x: width/2, y: height - 100 }
+    this.mod = this.add.rectangle(width / 2, height - 100, 40, 60, 0x0079D3); // Reddit Blue
+    this.physics.add.existing(this.mod, true);
 
     // The Troll (Projectile) - Red Circle
-    this.troll = this.add.circle(width / 2, height - 100, 15, 0xff0000) as any;
+    this.troll = this.add.circle(width / 2, height - 100, 15, 0xFF4500) as any; // Reddit Orange-Red
     this.physics.add.existing(this.troll);
     this.troll.body.setCircle(15);
     this.troll.body.setBounce(0.5);
     this.troll.body.setCollideWorldBounds(true);
-    this.troll.body.setAllowGravity(false); // Initially no gravity
+    this.troll.body.setAllowGravity(false);
 
     // The Rope (Visual only)
     this.rope = this.add.graphics();
 
     // 3. Upvotes (Boosts)
+    this.createUpvoteTexture(); // Generate the asset once
     this.upvotes = this.physics.add.group();
     this.generateUpvotes();
 
     // 4. Score
     this.scoreText = this.add.text(20, 20, 'Score: 0', {
-      fontFamily: 'Arial',
+      fontFamily: 'Verdana',
       fontSize: '24px',
       color: '#ffffff',
-    }).setScrollFactor(0);
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setScrollFactor(0).setDepth(100);
 
     // 5. Input
     this.input.on('pointerdown', this.handleInput, this);
@@ -60,42 +67,111 @@ class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.troll, this.upvotes, this.handleUpvoteCollision, undefined, this);
   }
 
+  createSky() {
+    const { width, height } = this.scale;
+    // We want a gradient from space (black/dark blue) at -50000 to sky blue at 'height'.
+    // Since Phaser gradients on huge rectangles can be tricky, let's make a fixed background 
+    // that follows the camera but changes color, OR just a massive static one.
+    // For simplicity and "mobile" (performance), let's use a smaller texture scaled up, 
+    // or just a solid color that we darken as we go up in `update`.
+    // Let's try the active approach: A background layer that is Interpolated based on height.
+    // Actually, a big gradient texture is easiest to understand.
+
+    const skyHeight = 50000 + height;
+    const graphics = this.add.graphics();
+    graphics.fillGradientStyle(0x000000, 0x000000, 0x87CEEB, 0x87CEEB, 1);
+    graphics.fillRect(0, -50000, width, skyHeight);
+    graphics.setDepth(-1); // Send to back
+  }
+
+  createUpvoteTexture() {
+    // Check if texture exists
+    if (!this.textures.exists('upvote')) {
+      const graphics = this.make.graphics({ x: 0, y: 0 }, false);
+      graphics.fillStyle(0xFF4500, 1);
+      graphics.lineStyle(2, 0xFFFFFF, 1);
+
+      // Draw Upvote Arrow shape (approx 40x40)
+      // Center is roughly 20,20
+      graphics.beginPath();
+      graphics.moveTo(0, 20);   // Left point of head
+      graphics.lineTo(20, 0);   // Top tip
+      graphics.lineTo(40, 20);  // Right point of head
+      graphics.lineTo(30, 20);  // Indent right
+      graphics.lineTo(30, 40);  // Stem right bottom
+      graphics.lineTo(10, 40);  // Stem left bottom
+      graphics.lineTo(10, 20);  // Indent left
+      graphics.closePath();
+
+      graphics.fillPath();
+      graphics.strokePath();
+
+      graphics.generateTexture('upvote', 40, 42);
+      graphics.destroy(); // Cleanup the graphics object
+    }
+  }
+
   generateUpvotes() {
     const { width, height } = this.scale;
-    // Spawn upvotes starting from above the screen up to -50000 pixels
     const startY = height - 500;
     const endY = -50000;
-    const gap = 400; // Vertical gap between potential upvotes
+    const gap = 300; // More frequent boosts
 
     for (let y = startY; y > endY; y -= gap) {
-      if (Math.random() > 0.3) { // 70% chance to spawn at each interval
+      if (Math.random() > 0.4) {
         const x = Phaser.Math.Between(50, width - 50);
-        // Create an "Arrow" shape using a Triangle
-        const upvote = this.add.triangle(x, y, 0, 20, 10, 0, 20, 20, 0xff4500); // Orange-Red
-        this.physics.add.existing(upvote);
-        (upvote.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
-        (upvote.body as Phaser.Physics.Arcade.Body).setImmovable(true);
-        this.upvotes.add(upvote);
+        const upvote = this.upvotes.create(x, y, 'upvote');
+        upvote.body.setAllowGravity(false);
+        upvote.body.setImmovable(true);
+        // Add a slight wobble for "juice"
+        this.tweens.add({
+          targets: upvote,
+          y: y - 10,
+          duration: 1500,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
       }
     }
   }
 
   handleUpvoteCollision(_obj1: any, obj2: any) {
-    const upvote = obj2 as Phaser.GameObjects.Shape;
-    // Effect: Boost velocity UP
-    this.troll.body.velocity.y -= 800; // Add 800 upward velocity (negative Y)
+    // obj2 is the upvote sprite (group member)
+    const upvote = obj2 as Phaser.Physics.Arcade.Sprite;
 
-    // Visual Feedback
+    // Disable body to prevent double triggering
+    if (!upvote.body || !upvote.body.enable) return;
+    upvote.disableBody(true, false); // Disable physics, keep visible for tween
+
+    // Effect: Boost velocity UP
+    // If we are already going fast, add less, but ensure minimum boost
+    const currentVel = this.troll.body.velocity.y;
+    const boost = -1000;
+
+    if (currentVel > 0) {
+      // Falling? Shoot back up!
+      this.troll.body.setVelocityY(boost);
+    } else {
+      // Already going up? Add speed
+      this.troll.body.setVelocityY(currentVel - 600);
+    }
+
+    // Visual Feedback: Expand and Fade
     this.tweens.add({
       targets: upvote,
       alpha: 0,
-      scaleX: 1.5,
-      scaleY: 1.5,
-      duration: 100,
+      scaleX: 2,
+      scaleY: 2,
+      duration: 300,
       onComplete: () => {
         upvote.destroy();
       }
     });
+
+    // Update Score Text Color temporarily for popping effect?
+    this.scoreText.setTint(0xFF4500);
+    this.time.delayedCall(300, () => this.scoreText.clearTint());
   }
 
   override update(_time: number, _delta: number) {
@@ -113,7 +189,7 @@ class GameScene extends Phaser.Scene {
       this.troll.setPosition(trollX, trollY);
 
       this.rope.clear();
-      this.rope.lineStyle(2, 0xffffff, 1);
+      this.rope.lineStyle(3, 0xFFFFFF, 1);
       this.rope.beginPath();
       this.rope.moveTo(this.mod.x, this.mod.y);
       this.rope.lineTo(trollX, trollY);
@@ -125,7 +201,7 @@ class GameScene extends Phaser.Scene {
       const startY = this.scale.height - 100;
       const currentHeight = Math.max(0, startY - this.troll.y);
       const score = Math.floor(currentHeight / 10);
-      this.scoreText.setText(`Score: ${score}`);
+      this.scoreText.setText(`Height: ${score}`);
 
       // Camera Follow 
       if (this.troll.body.velocity.y > 0) {
@@ -170,10 +246,11 @@ class GameScene extends Phaser.Scene {
     this.cameras.main.setScroll(0, 0);
     this.troll.body.setVelocity(0, 0);
 
-    // Respawn upvotes? Or keep them destroyed? 
-    // Classic Yeti Sports: Reset level.
+    // Clear and Respawn upvotes
     this.upvotes.clear(true, true);
     this.generateUpvotes();
+
+    // Reset background color or effects if any
   }
 }
 
@@ -182,7 +259,7 @@ const config: Phaser.Types.Core.GameConfig = {
   width: window.innerWidth,
   height: window.innerHeight,
   parent: 'game-container',
-  backgroundColor: '#1a1a1d',
+  backgroundColor: '#87CEEB', // Default sky blue
   physics: {
     default: 'arcade',
     arcade: {
