@@ -7,6 +7,17 @@ You are writing a Devvit web application that will be executed on Reddit.com. To
 - **Communication**: tRPC v11 for end-to-end type safety
 - **Testing**: Vitest
 
+## AI Development Tools (MCP & Context)
+
+This project supports the **Devvit Model Context Protocol (MCP)** for enhanced AI assistance.
+
+- **MCP Server**: The `@devvit/mcp` package is available to provide direct access to documentation and logs.
+- **Search Tool**: Use `devvit_search` to query official docs.
+- **Logs Tool**: Use `devvit_logs` to debug live apps.
+- **Context Files**:
+    - `https://developers.reddit.com/docs/llms.txt`: Condensed context for prompts.
+    - `https://developers.reddit.com/docs/llms-full.txt`: Full knowledge base (use sparingly).
+
 ## Layout & Architecture
 
 - `/src/server`: **Backend Code**. This runs in a secure, serverless environment.

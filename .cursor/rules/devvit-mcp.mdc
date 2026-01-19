@@ -1,0 +1,52 @@
+---
+description: Use the Devvit MCP server to access official Reddit Developer documentation and logs.
+globs: 
+---
+
+# Devvit MCP Server Integration
+
+This project is configured to use the **Devvit Model Context Protocol (MCP)** server. This allows AI agents to directly search the official Reddit Developer documentation and access application logs for context-aware assistance.
+
+## Available Tools
+
+The Devvit MCP server provides the following tools for the agent:
+
+### 1. `devvit_search`
+**Purpose:** Search the official Reddit Developer documentation.
+**Usage:** Use this when you need authoritative information about the Devvit API, platform capabilities, limitations, or examples.
+**Example:** `devvit_search(query: "how to use redis in devvit")`
+**Best Practice:** Prefer using this tool over relying on general training data, as the Devvit platform evolves rapidly.
+
+### 2. `devvit_logs` (Experimental)
+**Purpose:** Query logs for a deployed Devvit application on a specific subreddit.
+**Usage:** Use this to debug runtime issues or understand current app behavior in a live environment.
+**Example:** `devvit_logs(subreddit: "my_subreddit", timeframe: "1h")` (Check actual tool signature for precise arguments).
+
+## Configuration
+
+To ensure this MCP server is active in your AI editor (Cursor, Claude Desktop, VS Code), verify the following configuration in your MCP settings (e.g., `.cursor/mcp.json` or equivalent):
+
+```json
+{
+  "mcpServers": {
+    "devvit": {
+      "command": "npx",
+      "args": ["-y", "@devvit/mcp"]
+    }
+  }
+}
+```
+
+## Integration Workflow
+
+1. **Problem Identification:** When faced with a Devvit-specific question or error.
+2. **Search:** Use `devvit_search` to find relevant documentation.
+3. **Plan:** Formulate a solution based on the retrieved docs.
+4. **Implement:** Write code that aligns with the official API patterns.
+5. **Debug (if needed):** Use `devvit_logs` to investigate runtime behavior if the app is deployed.
+
+## LLM Context Files
+
+For broader planning or learning about Devvit without specific search queries, you can reference the following files if provided:
+- `https://developers.reddit.com/docs/llms.txt` (Concise summary for prompts)
+- `https://developers.reddit.com/docs/llms-full.txt` (Full documentation context)
