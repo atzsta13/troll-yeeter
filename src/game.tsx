@@ -48,9 +48,55 @@ class GameScene extends Phaser.Scene {
 
     generateEmojiTexture('mod_texture', '🗿');
     generateEmojiTexture('troll_texture', '🧌');
-    generateEmojiTexture('upvote_texture', '🚀');
+    // generateEmojiTexture('upvote_texture', '🚀'); // Replaced with vector below
     generateEmojiTexture('star_texture', '✨', '32px');
     generateEmojiTexture('cloud_texture', '☁️', '128px');
+
+    // Vector Upvote Arrow
+    if (!this.textures.exists('upvote_texture')) {
+      const graphics = this.make.graphics({ x: 0, y: 0 }, false);
+
+      // Style: Reddit Orange #FF4500, White Outline
+      graphics.fillStyle(0xFF4500, 1);
+      graphics.lineStyle(4, 0xFFFFFF, 1);
+
+      // Draw Arrow (Centered at 32, 32 approx)
+      graphics.beginPath();
+      graphics.moveTo(0, 30);   // Left Head
+      graphics.lineTo(32, 0);   // Tip
+      graphics.lineTo(64, 30);  // Right Head
+      graphics.lineTo(48, 30);  // Right Neck
+      graphics.lineTo(48, 64);  // Right Stem
+      graphics.lineTo(16, 64);  // Left Stem
+      graphics.lineTo(16, 30);  // Left Neck
+      graphics.closePath();
+
+      graphics.fillPath();
+      graphics.strokePath();
+
+      graphics.generateTexture('upvote_texture', 64, 66);
+      graphics.destroy();
+    }
+  }
+
+  createBoundaries() {
+    const { width, height } = this.scale;
+    const wallWidth = 20;
+
+    // Visuals for Walls
+    const graphics = this.add.graphics();
+    graphics.fillStyle(0x87CEEB, 0.3); // Ice Blue, semi-transparent
+    graphics.fillRect(0, -50000, wallWidth, 50000 + height); // Left Wall
+    graphics.fillRect(width - wallWidth, -50000, wallWidth, 50000 + height); // Right Wall
+
+    // Floor Visual (Snow/Ice)
+    graphics.fillStyle(0xFFFFFF, 0.8);
+    graphics.fillRect(0, height - 10, width, 10);
+    graphics.setDepth(10); // On top of sky, below UI
+
+    // Adjust Physics to match visuals
+    // x = wallWidth, width = width - 2*wallWidth
+    this.physics.world.setBounds(wallWidth, -50000, width - (wallWidth * 2), height + 50000);
   }
 
   createDecorations() {
@@ -79,8 +125,9 @@ class GameScene extends Phaser.Scene {
     this.createAssets();
     this.createSky();
     this.createDecorations();
+    this.createBoundaries();
 
-    this.physics.world.setBounds(0, -50000, width, height + 50000);
+    // this.physics.world.setBounds... is handled in createBoundaries
     this.physics.world.checkCollision.up = false;
     this.physics.world.checkCollision.down = true;
     this.physics.world.checkCollision.left = true;
