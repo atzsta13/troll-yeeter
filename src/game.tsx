@@ -33,7 +33,7 @@ class GameScene extends Phaser.Scene {
     this.physics.world.checkCollision.down = true;
     this.physics.world.checkCollision.left = true;
     this.physics.world.checkCollision.right = true;
-    this.physics.world.gravity.y = 600; // Reduced gravity
+    this.physics.world.gravity.y = 400; // Reduced gravity more
 
     // 2. Actors
     this.mod = this.add.rectangle(width / 2, height - 100, 40, 60, 0x0079D3);
@@ -64,7 +64,7 @@ class GameScene extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(100);
 
     // 5. Version
-    this.add.text(width - 20, 20, 'v0.6', {
+    this.add.text(width - 20, 20, 'v0.7', {
       fontFamily: 'Verdana',
       fontSize: '16px',
       color: '#ffffff',
