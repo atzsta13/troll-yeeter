@@ -61,7 +61,16 @@ class GameScene extends Phaser.Scene {
       strokeThickness: 2
     }).setScrollFactor(0).setDepth(100);
 
-    // 5. Input
+    // 5. Version
+    this.add.text(width - 20, 20, 'v0.5', {
+      fontFamily: 'Verdana',
+      fontSize: '16px',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setScrollFactor(0).setDepth(100).setOrigin(1, 0);
+
+    // 6. Input
     this.input.on('pointerdown', this.handleInput, this);
 
     // 6. Collisions
