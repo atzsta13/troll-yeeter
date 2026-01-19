@@ -8,7 +8,7 @@ class GameScene extends Phaser.Scene {
   private state: 'IDLE' | 'SPINNING' | 'FLYING' | 'GAME_OVER' = 'IDLE';
   private angleVal: number = 0;
   private radius: number = 100;
-  private rotationSpeed: number = 0.1;
+  private rotationSpeed: number = 0.05; // Slower spin
   private power: number = 1500;
   private scoreText!: Phaser.GameObjects.Text;
   private maxScore: number = 0;
@@ -33,6 +33,7 @@ class GameScene extends Phaser.Scene {
     this.physics.world.checkCollision.down = true;
     this.physics.world.checkCollision.left = true;
     this.physics.world.checkCollision.right = true;
+    this.physics.world.gravity.y = 600; // Reduced gravity
 
     // 2. Actors
     this.mod = this.add.rectangle(width / 2, height - 100, 40, 60, 0x0079D3);
@@ -44,6 +45,7 @@ class GameScene extends Phaser.Scene {
     this.troll.body.setBounce(0.5);
     this.troll.body.setCollideWorldBounds(true);
     this.troll.body.setAllowGravity(false);
+    this.troll.body.setDragX(0); // Reset drag
 
     this.rope = this.add.graphics();
 
@@ -62,7 +64,7 @@ class GameScene extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(100);
 
     // 5. Version
-    this.add.text(width - 20, 20, 'v0.5', {
+    this.add.text(width - 20, 20, 'v0.6', {
       fontFamily: 'Verdana',
       fontSize: '16px',
       color: '#ffffff',
@@ -218,10 +220,16 @@ class GameScene extends Phaser.Scene {
 
       // Reset Condition: Collides with Bottom (Floor)
       if (this.troll.body.blocked.down) {
-        // Ensure we aren't just starting launch (check velocity)
-        // Wait for it to settle? Or instant game over on floor hit?
-        // Yeti sports usually ends when you hit the snow.
-        this.gameOver();
+        // Apply friction to slow down horizontal slide
+        this.troll.body.setDragX(500);
+
+        // Only end game when truly stopped
+        if (Math.abs(this.troll.body.velocity.y) < 10 && Math.abs(this.troll.body.velocity.x) < 10) {
+          this.gameOver();
+        }
+      } else {
+        // In air? No drag.
+        this.troll.body.setDragX(0);
       }
     }
   }
