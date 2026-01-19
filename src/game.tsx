@@ -1,110 +1,113 @@
-import './index.css';
+import Phaser from 'phaser';
 
-import { StrictMode, useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-import { navigateTo } from '@devvit/web/client';
-import { trpc } from './trpc';
-import type { inferRouterOutputs } from '@trpc/server';
-import type { AppRouter } from './server/trpc';
+class GameScene extends Phaser.Scene {
+  private mod!: Phaser.GameObjects.Rectangle;
+  private troll!: Phaser.GameObjects.Arc & { body: Phaser.Physics.Arcade.Body };
+  private state: 'IDLE' | 'SPINNING' | 'FLYING' = 'IDLE';
+  private angleVal: number = 0;
+  private scoreText!: Phaser.GameObjects.Text;
 
-type RouterOutputs = inferRouterOutputs<AppRouter>;
+  constructor() {
+    super({ key: 'GameScene' });
+  }
 
-export const App = () => {
-  const [init, setInit] = useState<RouterOutputs['init']['get'] | null>(null);
+  create() {
+    const { width, height } = this.scale;
 
-  const fetchInit = async () => {
-    const data = await trpc.init.get.query();
-    setInit(data);
-  };
+    // 1. Actors
+    // Mod (Static Blue Rectangle)
+    this.mod = this.add.rectangle(width / 2, height - 100, 60, 100, 0x0000ff);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchInit();
-  }, []);
+    // Troll (Red Circle)
+    // Note: We cast to Arc & Body for TypeScript niceness with Arcade Physics
+    this.troll = this.add.circle(width / 2, height - 100, 20, 0xff0000) as any;
+    this.physics.add.existing(this.troll);
 
-  const [loading, setLoading] = useState(false);
-  const { username, count } = init ?? { count: 0 };
+    // Disable gravity initially
+    this.troll.body.setAllowGravity(false);
+    this.troll.body.setCollideWorldBounds(true);
+    this.troll.body.setBounce(0.5, 0.5);
 
-  const increment = async () => {
-    setLoading(true);
-    const result = await trpc.counter.increment.mutate();
-    setInit((prev) => (prev ? { ...prev, count: result.count } : null));
-    setLoading(false);
-  };
+    // World Bounds: Left, Right, Bottom collide. Top open.
+    // By default checkCollision is { up: true, down: true, left: true, right: true }
+    this.physics.world.checkCollision.up = false;
 
-  const decrement = async () => {
-    setLoading(true);
-    const result = await trpc.counter.decrement.mutate();
-    setInit((prev) => (prev ? { ...prev, count: result.count } : null));
-    setLoading(false);
-  };
+    // 2. Score
+    this.scoreText = this.add.text(20, 20, 'Score: 0', {
+      fontSize: '32px',
+      color: '#ffffff',
+    }).setScrollFactor(0); // Fix to camera
 
-  return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center gap-4">
-      <img
-        className="mx-auto w-1/2 max-w-[250px] object-contain"
-        src="/snoo.png"
-        alt="Snoo"
-      />
-      <div className="flex flex-col items-center gap-2">
-        <h1 className="text-center text-2xl font-bold text-gray-900">
-          {username ? `Hey ${username} 👋` : ''}
-        </h1>
-        <p className="text-center text-base text-gray-600">
-          Edit{' '}
-          <span className="rounded bg-[#e5ebee] px-1 py-0.5">
-            src/client/game/App.tsx
-          </span>{' '}
-          to get started.
-        </p>
-      </div>
-      <div className="mt-5 flex items-center justify-center">
-        <button
-          className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-[#d93900] font-mono text-[2.5em] leading-none text-white transition-colors"
-          onClick={decrement}
-          disabled={loading}
-        >
-          -
-        </button>
-        <span className="mx-5 min-w-[50px] text-center text-[1.8em] leading-none font-medium text-gray-900">
-          {loading ? '...' : count}
-        </span>
-        <button
-          className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-[#d93900] font-mono text-[2.5em] leading-none text-white transition-colors"
-          onClick={increment}
-          disabled={loading}
-        >
-          +
-        </button>
-      </div>
-      <footer className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-3 text-[0.8em] text-gray-600">
-        <button
-          className="cursor-pointer"
-          onClick={() => navigateTo('https://developers.reddit.com/docs')}
-        >
-          Docs
-        </button>
-        <span className="text-gray-300">|</span>
-        <button
-          className="cursor-pointer"
-          onClick={() => navigateTo('https://www.reddit.com/r/Devvit')}
-        >
-          r/Devvit
-        </button>
-        <span className="text-gray-300">|</span>
-        <button
-          className="cursor-pointer"
-          onClick={() => navigateTo('https://discord.com/invite/R7yu2wh9Qz')}
-        >
-          Discord
-        </button>
-      </footer>
-    </div>
-  );
+    // 3. Input
+    this.input.on('pointerdown', this.handleInput, this);
+  }
+
+  override update(_time: number, delta: number) {
+    if (this.state === 'SPINNING') {
+      const radius = 80;
+      const speed = 0.005;
+
+      // Rotate angle via time
+      this.angleVal += speed * delta;
+
+      // Position Troll around Mod
+      this.troll.x = this.mod.x + Math.cos(this.angleVal) * radius;
+      this.troll.y = this.mod.y + Math.sin(this.angleVal) * radius;
+    } else if (this.state === 'FLYING') {
+      const height = (this.scale.height - 100) - this.troll.y;
+      const score = Math.max(0, Math.floor(height / 10));
+      this.scoreText.setText(`Score: ${score}`);
+    }
+  }
+
+  handleInput() {
+    if (this.state === 'IDLE') {
+      this.state = 'SPINNING';
+    } else if (this.state === 'SPINNING') {
+      this.launchTroll();
+    }
+  }
+
+  launchTroll() {
+    this.state = 'FLYING';
+
+    // Calculate Tangential Vector
+    // Tangent angle = angleVal + PI/2 (90 degrees)
+    const launchAngle = this.angleVal + Math.PI / 2;
+    const power = 1000; // Velocity magnitude
+
+    this.troll.body.setAllowGravity(true);
+    // Gravity Y
+    this.troll.body.setGravityY(800);
+
+    const vx = Math.cos(launchAngle) * power;
+    const vy = Math.sin(launchAngle) * power;
+
+    this.troll.body.setVelocity(vx, vy);
+
+    // Camera follow
+    this.cameras.main.startFollow(this.troll, true, 0, 0.1);
+  }
+}
+
+const config: Phaser.Types.Core.GameConfig = {
+  type: Phaser.AUTO,
+  width: window.innerWidth,
+  height: window.innerHeight,
+  parent: 'game-container',
+  backgroundColor: '#222222',
+  physics: {
+    default: 'arcade',
+    arcade: {
+      gravity: { x: 0, y: 0 },
+      debug: false,
+    },
+  },
+  scene: [GameScene],
+  scale: {
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+  }
 };
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-);
+new Phaser.Game(config);
