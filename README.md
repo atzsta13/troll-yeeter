@@ -1,34 +1,46 @@
-## Devvit Vibe Coding Template
+# Troll Yeeter 🧌🚀
 
-> Experimental! Template may change!
+> A physics-based launcher game for Reddit, built with Devvit & Phaser 3.
 
-A starter to build web applications on Reddit's developer platform
+**Troll Yeeter** is a "Yeti Sports" style vertical launcher where you play as a Reddit Mod spinning a Troll around ... and yeeting them into the stratosphere.
 
-- [Devvit](https://developers.reddit.com/): A way to build and deploy immersive games on Reddit
-- [Vite](https://vite.dev/): For compiling the webView
-- [React](https://react.dev/): For UI
-- [Hono](https://hono.dev/): For backend logic
-- [TRPC](https://trpc.io/): Type safe RPCs from server to client
-- [Tailwind](https://tailwindcss.com/): For styles
-- [Typescript](https://www.typescriptlang.org/): For type safety
+## Quick Start
 
-## Getting Started
+1.  **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+2.  **Run Locally (Playtest)**:
+    ```bash
+    npm run dev
+    # or
+    devvit playtest
+    ```
+3.  **Deploy**:
+    ```bash
+    npm run launch
+    ```
 
-> Make sure you have Node 22 downloaded on your machine before running!
+## How to Play
+1.  **Tap Once**: The Troll starts **spinning** around the Mod.
+2.  **Tap Again**: Release the Troll at the perfect angle to send them flying **up**!
+3.  **Goal**: Reach the highest altitude score possible before gravity brings them back down.
 
-1. Run `npm create devvit@latest --template=vibe-coding`
-2. Go through the installation wizard. You will need to create a Reddit account and connect it to Reddit developers
-3. Copy the command on the success page into your terminal
+## Tech Stack & Architecture
+-   **Engine**: [Phaser 3](https://phaser.io/) (Headless/Canvas)
+-   **Platform**: Reddit Devvit (Blocks + Webview)
+-   **Styling**: Tailwind CSS
+-   **AI Tooling**: Devvit MCP Server configured (see `AGENTS.md`)
 
-## Commands
+## Documentation
+-   **[GAME_DESIGN.md](./GAME_DESIGN.md)**: Detailed breakdown of the game mechanics, physics formulas, and state machine.
+-   **[AGENTS.md](./AGENTS.md)**: Agent directives, tech stack details, and AI tooling setup.
+-   **[AGENTS.md#ai-development-tools-mcp--context](./AGENTS.md#ai-development-tools-mcp--context)**: How to use the Devvit MCP server.
 
-- `npm run dev`: Starts a development server where you can develop your application live on Reddit.
-- `npm run build`: Builds your client and server projects
-- `npm run deploy`: Uploads a new version of your app
-- `npm run launch`: Publishes your app for review
-- `npm run login`: Logs your CLI into Reddit
-- `npm run check`: Type checks, lints, and prettifies your app
+## Project Structure
+-   `src/server/`: Backend Devvit code (Triggers, API).
+-   `src/game.tsx`: **Main Game Logic** (Phaser 3 implementation).
+-   `src/splash.tsx`: Inline feed view (React).
 
-## MCP Integration
-
-If you'd like to use the Devvit MCP server, please visit: https://developers.reddit.com/docs/next/guides/ai
+---
+*Built with the [Devvit Vibe Coding Template](https://developers.reddit.com/)*
