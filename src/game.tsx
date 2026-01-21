@@ -27,68 +27,16 @@ class GameScene extends Phaser.Scene {
     super({ key: 'GameScene' });
   }
 
-  createAssets() {
-    const generateEmojiTexture = (key: string, emoji: string, fontSize: string = '64px') => {
-      if (!this.textures.exists(key)) {
-        const text = this.make.text({
-          style: { fontSize: fontSize, fontFamily: 'Arial' },
-          text: emoji,
-          add: false
-        });
-        text.setOrigin(0.5);
-
-        const w = text.width || 64;
-        const h = text.height || 64;
-        const rt = this.make.renderTexture({ width: w, height: h });
-        rt.draw(text, w / 2, h / 2);
-        rt.saveTexture(key);
-        text.destroy();
-      }
-    };
-
-    generateEmojiTexture('mod_texture', '🗿');
-    generateEmojiTexture('troll_texture', '🧌');
-    // generateEmojiTexture('upvote_texture', '🚀'); // Replaced with vector below
-    generateEmojiTexture('star_texture', '✨', '32px');
-    generateEmojiTexture('cloud_texture', '☁️', '128px');
-
-    // Vector Upvote Arrow
-    if (!this.textures.exists('upvote_texture')) {
-      const graphics = this.make.graphics({ x: 0, y: 0 }, false);
-
-      // Style: Reddit Orange #FF4500, White Outline
-      graphics.fillStyle(0xFF4500, 1);
-      graphics.lineStyle(4, 0xFFFFFF, 1);
-
-      // Draw Arrow (Centered at 32, 32 approx)
-      graphics.beginPath();
-      graphics.moveTo(0, 30);   // Left Head
-      graphics.lineTo(32, 0);   // Tip
-      graphics.lineTo(64, 30);  // Right Head
-      graphics.lineTo(48, 30);  // Right Neck
-      graphics.lineTo(48, 64);  // Right Stem
-      graphics.lineTo(16, 64);  // Left Stem
-      graphics.lineTo(16, 30);  // Left Neck
-      graphics.closePath();
-
-      graphics.fillPath();
-      graphics.strokePath();
-
-      graphics.generateTexture('upvote_texture', 64, 66);
-      graphics.destroy();
-    }
-  }
-
   createBoundaries() {
     const { width, height } = this.scale;
-    const wallWidth = 30; // Thicker walls
-    const floorHeight = 40; // Thicker floor
+    const wallWidth = 20; // Reduced from 30
+    const floorHeight = 40;
 
     const graphics = this.add.graphics();
 
     // Walls - High Contrast "Ice Blocks"
-    graphics.fillStyle(0x4A90E2, 1); // Strong Ice Blue
-    graphics.lineStyle(4, 0x1C5893, 1); // Dark Blue Border
+    graphics.fillStyle(0x4A90E2, 1);
+    graphics.lineStyle(4, 0x1C5893, 1);
 
     // Left Wall
     graphics.fillRect(0, -50000, wallWidth, 50000 + height);
@@ -99,16 +47,57 @@ class GameScene extends Phaser.Scene {
     graphics.strokeRect(width - wallWidth, -50000, wallWidth, 50000 + height);
 
     // Floor - Solid Ground
-    graphics.fillStyle(0xFFFFFF, 1); // Pure White Snow
-    graphics.lineStyle(4, 0x888888, 1); // Grey Border
+    graphics.fillStyle(0xFFFFFF, 1);
+    graphics.lineStyle(4, 0x888888, 1);
     graphics.fillRect(0, height - floorHeight, width, floorHeight);
     graphics.strokeRect(0, height - floorHeight, width, floorHeight);
 
     graphics.setDepth(10);
 
     // Physics Bounds
-    // Bottom collision at 'height - floorHeight' effectively
     this.physics.world.setBounds(wallWidth, -50000, width - (wallWidth * 2), height - floorHeight + 50000);
+  }
+
+  createAssets() {
+    const generateEmojiTexture = (key: string, emoji: string, fontSize: string = '64px') => {
+      if (!this.textures.exists(key)) {
+        const text = this.make.text({
+          style: { fontSize: fontSize, fontFamily: 'Arial' },
+          text: emoji,
+          add: false
+        });
+        text.setOrigin(0.5);
+        const w = text.width || 64;
+        const h = text.height || 64;
+        const rt = this.make.renderTexture({ width: w, height: h });
+        rt.draw(text, w / 2, h / 2);
+        rt.saveTexture(key);
+        text.destroy();
+      }
+    };
+    generateEmojiTexture('mod_texture', '🗿');
+    generateEmojiTexture('troll_texture', '🧌');
+    generateEmojiTexture('star_texture', '✨', '32px');
+    generateEmojiTexture('cloud_texture', '☁️', '128px');
+
+    if (!this.textures.exists('upvote_texture')) {
+      const graphics = this.make.graphics({ x: 0, y: 0 }, false);
+      graphics.fillStyle(0xFF4500, 1);
+      graphics.lineStyle(4, 0xFFFFFF, 1);
+      graphics.beginPath();
+      graphics.moveTo(0, 30);
+      graphics.lineTo(32, 0);
+      graphics.lineTo(64, 30);
+      graphics.lineTo(48, 30);
+      graphics.lineTo(48, 64);
+      graphics.lineTo(16, 64);
+      graphics.lineTo(16, 30);
+      graphics.closePath();
+      graphics.fillPath();
+      graphics.strokePath();
+      graphics.generateTexture('upvote_texture', 64, 66);
+      graphics.destroy();
+    }
   }
 
   createDecorations() {
@@ -133,13 +122,13 @@ class GameScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
+    const floorHeight = 40;
 
     this.createAssets();
     this.createSky();
     this.createDecorations();
     this.createBoundaries();
 
-    // this.physics.world.setBounds... is handled in createBoundaries
     this.physics.world.checkCollision.up = false;
     this.physics.world.checkCollision.down = true;
     this.physics.world.checkCollision.left = true;
@@ -147,13 +136,18 @@ class GameScene extends Phaser.Scene {
     this.physics.world.gravity.y = 400;
 
     // Actors
-    this.mod = this.add.rectangle(width / 2, height - 100, 40, 60, 0x000000, 0);
-    this.add.sprite(width / 2, height - 100, 'mod_texture').setScale(0.8);
+    // Mod sits on floor. Floor top is (height - floorHeight). Mod origin is center. Mod height 60.
+    // Y = (height - floorHeight) - 30.
+    const platformY = height - floorHeight;
+    const modY = platformY - 30; // 30 is half of 60px height
+
+    this.mod = this.add.rectangle(width / 2, modY, 40, 60, 0x000000, 0);
+    this.add.sprite(width / 2, modY, 'mod_texture').setScale(0.8);
     this.physics.add.existing(this.mod, true);
 
     // Troll
-    this.troll = this.physics.add.sprite(width / 2, height - 100, 'troll_texture').setScale(0.6);
-    this.tBody.setCircle(25);
+    this.troll = this.physics.add.sprite(width / 2, modY, 'troll_texture').setScale(0.6);
+    this.tBody.setCircle(20); // 40px diameter (Visual is ~38px)
     this.tBody.setBounce(0.5);
     this.tBody.setCollideWorldBounds(true);
     this.tBody.setAllowGravity(false);
@@ -183,7 +177,7 @@ class GameScene extends Phaser.Scene {
       shadow: { blur: 2, color: '#000000', fill: true }
     }).setScrollFactor(0).setDepth(100);
 
-    this.add.text(width - 20, 20, 'v1.1', {
+    this.add.text(width - 20, 20, 'v1.2', {
       fontFamily: 'Verdana', fontSize: '16px', color: '#ffffff',
       stroke: '#000000', strokeThickness: 2
     }).setScrollFactor(0).setDepth(100).setOrigin(1, 0);
@@ -199,11 +193,14 @@ class GameScene extends Phaser.Scene {
     const startY = height - 500;
     const endY = -50000;
     const gap = 300;
+    const wallWidth = 20;
+    const safePadding = 50; // Distance from wall
 
     for (let y = startY; y > endY; y -= gap) {
       if (Math.random() > 0.4) {
         const isLeft = Math.random() > 0.5;
-        const x = isLeft ? 40 : width - 40;
+        // Place safely away from walls
+        const x = isLeft ? (wallWidth + safePadding) : (width - wallWidth - safePadding);
 
         const upvote = this.upvotes.create(x, y, 'upvote_texture');
         upvote.body.setAllowGravity(false);

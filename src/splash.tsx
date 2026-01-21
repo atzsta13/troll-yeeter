@@ -38,7 +38,7 @@ export const Splash = () => {
       </div>
 
       <div className="absolute bottom-8 text-sm text-gray-400">
-        v1.1 • Built with Phaser & Devvit
+        v1.2 • Built with Phaser & Devvit
       </div>
     </div>
   );
