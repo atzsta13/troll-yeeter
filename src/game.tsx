@@ -81,22 +81,34 @@ class GameScene extends Phaser.Scene {
 
   createBoundaries() {
     const { width, height } = this.scale;
-    const wallWidth = 20;
+    const wallWidth = 30; // Thicker walls
+    const floorHeight = 40; // Thicker floor
 
-    // Visuals for Walls
     const graphics = this.add.graphics();
-    graphics.fillStyle(0x87CEEB, 0.3); // Ice Blue, semi-transparent
-    graphics.fillRect(0, -50000, wallWidth, 50000 + height); // Left Wall
-    graphics.fillRect(width - wallWidth, -50000, wallWidth, 50000 + height); // Right Wall
 
-    // Floor Visual (Snow/Ice)
-    graphics.fillStyle(0xFFFFFF, 0.8);
-    graphics.fillRect(0, height - 10, width, 10);
-    graphics.setDepth(10); // On top of sky, below UI
+    // Walls - High Contrast "Ice Blocks"
+    graphics.fillStyle(0x4A90E2, 1); // Strong Ice Blue
+    graphics.lineStyle(4, 0x1C5893, 1); // Dark Blue Border
 
-    // Adjust Physics to match visuals
-    // x = wallWidth, width = width - 2*wallWidth
-    this.physics.world.setBounds(wallWidth, -50000, width - (wallWidth * 2), height + 50000);
+    // Left Wall
+    graphics.fillRect(0, -50000, wallWidth, 50000 + height);
+    graphics.strokeRect(0, -50000, wallWidth, 50000 + height);
+
+    // Right Wall
+    graphics.fillRect(width - wallWidth, -50000, wallWidth, 50000 + height);
+    graphics.strokeRect(width - wallWidth, -50000, wallWidth, 50000 + height);
+
+    // Floor - Solid Ground
+    graphics.fillStyle(0xFFFFFF, 1); // Pure White Snow
+    graphics.lineStyle(4, 0x888888, 1); // Grey Border
+    graphics.fillRect(0, height - floorHeight, width, floorHeight);
+    graphics.strokeRect(0, height - floorHeight, width, floorHeight);
+
+    graphics.setDepth(10);
+
+    // Physics Bounds
+    // Bottom collision at 'height - floorHeight' effectively
+    this.physics.world.setBounds(wallWidth, -50000, width - (wallWidth * 2), height - floorHeight + 50000);
   }
 
   createDecorations() {
@@ -171,7 +183,7 @@ class GameScene extends Phaser.Scene {
       shadow: { blur: 2, color: '#000000', fill: true }
     }).setScrollFactor(0).setDepth(100);
 
-    this.add.text(width - 20, 20, 'v1.0', {
+    this.add.text(width - 20, 20, 'v1.1', {
       fontFamily: 'Verdana', fontSize: '16px', color: '#ffffff',
       stroke: '#000000', strokeThickness: 2
     }).setScrollFactor(0).setDepth(100).setOrigin(1, 0);
