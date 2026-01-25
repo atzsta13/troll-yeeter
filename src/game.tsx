@@ -230,7 +230,7 @@ class GameScene extends Phaser.Scene {
       shadow: { blur: 2, color: '#000000', fill: true }
     }).setScrollFactor(0).setDepth(100);
 
-    this.add.text(width - 20, 20, 'v2.0', {
+    this.add.text(width - 20, 20, 'v2.1', {
       fontFamily: 'Verdana', fontSize: '16px', color: '#ffffff',
       stroke: '#000000', strokeThickness: 2
     }).setScrollFactor(0).setDepth(100).setOrigin(1, 0);
@@ -244,22 +244,30 @@ class GameScene extends Phaser.Scene {
   generateUpvotes() {
     const { width, height } = this.scale;
     const startY = height - 500;
-    const endY = -500000; // Increased height
-    const gap = 600; // Increased gap for fewer arrows
+    const endY = -500000;
+    const gap = 500; // Slightly closer than 600
     const wallWidth = 20;
-    const safePadding = 50; // Distance from wall
+    const offset = 35; // Close to wall (Seals peeking out)
 
     for (let y = startY; y > endY; y -= gap) {
-      if (Math.random() > 0.5) { // Lower probability
+      if (Math.random() > 0.4) {
         const isLeft = Math.random() > 0.5;
-        // Place safely away from walls
-        const x = isLeft ? (wallWidth + safePadding) : (width - wallWidth - safePadding);
+        const x = isLeft ? (wallWidth + offset) : (width - wallWidth - offset);
 
         const upvote = this.upvotes.create(x, y, 'upvote_texture');
         upvote.body.setAllowGravity(false);
         upvote.body.setImmovable(true);
-        if (!isLeft) upvote.setFlipX(true);
         upvote.setScale(0.8);
+
+        // Point inwards/upwards like a ramp/seal head
+        // 0 is Right. -PI/2 is Up.
+        // We want 45 deg Up-Right for Left Wall? 
+        // Logic: Arrow texture points UP by default?
+        // My arrow drawing code points UP (0,-30 tip).
+        // So 0 rotation = Pointing UP.
+        // Left Wall: Rotate +45 (Right-Up).
+        // Right Wall: Rotate -45 (Left-Up).
+        upvote.setRotation(isLeft ? 0.785 : -0.785);
       }
     }
   }
@@ -280,29 +288,27 @@ class GameScene extends Phaser.Scene {
     if (!upvote.body || !upvote.body.enable) return;
     upvote.disableBody(true, false);
 
-    // Ensure body exists before accessing velocity
     if (!this.tBody) return;
 
     const currentVel = this.tBody.velocity.y;
+    // Boost Logic
     if (currentVel > 0) {
-      this.tBody.setVelocityY(-1200);
+      this.tBody.setVelocityY(-1400); // Stronger bounce
     } else {
-      this.tBody.setVelocityY(currentVel - 800);
+      this.tBody.setVelocityY(currentVel - 1000); // Additive boost
     }
 
-    // Apply Angled Boost (Kick across screen)
+    // Angled Kick (Wall Bounce)
     if (upvote.x < this.scale.width / 2) {
-      // Left Arrow -> Kick Right
-      this.tBody.setVelocityX(400);
+      this.tBody.setVelocityX(500); // Kick Right
     } else {
-      // Right Arrow -> Kick Left
-      this.tBody.setVelocityX(-400);
+      this.tBody.setVelocityX(-500); // Kick Left
     }
 
-    // Floating Score Effect
-    const scorePopup = this.add.text(upvote.x, upvote.y, '+1', {
+    const scorePopup = this.add.text(upvote.x, upvote.y, 'BOOST!', {
       fontFamily: 'Verdana', fontSize: '24px', color: '#FF4500', fontStyle: 'bold'
-    });
+    }).setOrigin(0.5);
+
     this.tweens.add({
       targets: scorePopup,
       y: upvote.y - 50,
@@ -320,12 +326,10 @@ class GameScene extends Phaser.Scene {
     this.scoreText.setTint(0xFF4500);
     this.time.delayedCall(150, () => this.scoreText.clearTint());
 
-    // Small screen shake for feedback
     this.cameras.main.shake(100, 0.005);
   }
 
   override update(_time: number, _delta: number) {
-    // Safety check
     if (!this.tBody) return;
 
     if (this.state === 'IDLE') {
@@ -334,11 +338,17 @@ class GameScene extends Phaser.Scene {
       this.tBody.setVelocity(0, 0);
       this.rope.clear();
       this.angleVal = -Math.PI / 2;
+      this.rotationSpeed = 0.05; // Reset speed
       this.maxScore = 0;
       this.scoreText.setText('Score: 0');
       this.trollParticles.stop();
 
     } else if (this.state === 'SPINNING') {
+      // Wind-up mechanic: Accelerate spin
+      if (this.rotationSpeed < 0.25) {
+        this.rotationSpeed += 0.001;
+      }
+
       this.angleVal += this.rotationSpeed;
       const trollX = this.mod.x + Math.cos(this.angleVal) * this.radius;
       const trollY = this.mod.y + Math.sin(this.angleVal) * this.radius;
