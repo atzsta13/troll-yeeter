@@ -39,12 +39,12 @@ class GameScene extends Phaser.Scene {
     graphics.lineStyle(4, 0x1C5893, 1);
 
     // Left Wall
-    graphics.fillRect(0, -50000, wallWidth, 50000 + height);
-    graphics.strokeRect(0, -50000, wallWidth, 50000 + height);
+    graphics.fillRect(0, -500000, wallWidth, 500000 + height);
+    graphics.strokeRect(0, -500000, wallWidth, 500000 + height);
 
     // Right Wall
-    graphics.fillRect(width - wallWidth, -50000, wallWidth, 50000 + height);
-    graphics.strokeRect(width - wallWidth, -50000, wallWidth, 50000 + height);
+    graphics.fillRect(width - wallWidth, -500000, wallWidth, 500000 + height);
+    graphics.strokeRect(width - wallWidth, -500000, wallWidth, 500000 + height);
 
     // Floor - Solid Ground
     graphics.fillStyle(0xFFFFFF, 1);
@@ -55,7 +55,7 @@ class GameScene extends Phaser.Scene {
     graphics.setDepth(10);
 
     // Physics Bounds
-    this.physics.world.setBounds(wallWidth, -50000, width - (wallWidth * 2), height - floorHeight + 50000);
+    this.physics.world.setBounds(wallWidth, -500000, width - (wallWidth * 2), height - floorHeight + 500000);
   }
 
   createAssets() {
@@ -75,16 +75,25 @@ class GameScene extends Phaser.Scene {
         text.destroy();
       }
     };
-    generateEmojiTexture('mod_texture', '🗿');
-    generateEmojiTexture('troll_texture', '🧌');
-    generateEmojiTexture('star_texture', '✨', '32px');
-    generateEmojiTexture('cloud_texture', '☁️', '128px');
+    generateEmojiTexture('mod_texture', '🛡️'); // Shield for Mod
+    generateEmojiTexture('troll_texture', '🌚'); // Dark moon face for Troll? Or keeps existing. Let's try to match User request for "Reddit themed" -> Maybe just stick to the classic Troll for now but polished. '🧌' is fine.
+    // generateEmojiTexture('troll_texture', '🧌'); 
+    // Actually, let's use the default troll but maybe adding a circle bg in the sprite creation.
+
+    // Let's stick to the emojis but update the upvote
+    if (!this.textures.exists('key_troll_base')) {
+      generateEmojiTexture('key_troll_base', '🧌');
+    }
+
+    generateEmojiTexture('star_texture', '⬆️', '32px'); // Upvote particles? Or stars are fine.
+    generateEmojiTexture('cloud_texture', '💬', '128px'); // Comment bubbles as clouds
 
     if (!this.textures.exists('upvote_texture')) {
       const graphics = this.make.graphics({ x: 0, y: 0 }, false);
+      // Reddit Orange Upvote
       graphics.fillStyle(0xFF4500, 1);
-      graphics.lineStyle(4, 0xFFFFFF, 1);
       graphics.beginPath();
+      // Cleaner arrow shape
       graphics.moveTo(0, 30);
       graphics.lineTo(32, 0);
       graphics.lineTo(64, 30);
@@ -94,8 +103,12 @@ class GameScene extends Phaser.Scene {
       graphics.lineTo(16, 30);
       graphics.closePath();
       graphics.fillPath();
-      graphics.strokePath();
-      graphics.generateTexture('upvote_texture', 64, 66);
+
+      // Add a soft glow?
+      // Phaser graphics doesn't do blur easily without shaders/textures. 
+      // We'll trust the color to pop.
+
+      graphics.generateTexture('upvote_texture', 64, 64);
       graphics.destroy();
     }
   }
@@ -115,9 +128,20 @@ class GameScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const skyHeight = 50000 + height;
     const graphics = this.add.graphics();
-    graphics.fillGradientStyle(0x000020, 0x000020, 0x87CEEB, 0x87CEEB, 1);
+    // Reddit Dark Mode Background
+    graphics.fillStyle(0x1A1A1B, 1);
     graphics.fillRect(0, -50000, width, skyHeight);
     graphics.setDepth(-1);
+
+    // Add grid lines for "Drafts" or "Graph" feel?
+    graphics.lineStyle(1, 0x343536, 0.5);
+    const gridSize = 100;
+    for (let i = 0; i < width; i += gridSize) {
+      graphics.moveTo(i, -50000);
+      graphics.lineTo(i, height);
+    }
+    // Vertical only or horizontal too? Just vertical is nice.
+    graphics.strokePath();
   }
 
   create() {
@@ -146,7 +170,8 @@ class GameScene extends Phaser.Scene {
     this.physics.add.existing(this.mod, true);
 
     // Troll
-    this.troll = this.physics.add.sprite(width / 2, modY, 'troll_texture').setScale(0.6);
+    // Troll
+    this.troll = this.physics.add.sprite(width / 2, modY, 'key_troll_base').setScale(0.6);
     this.tBody.setCircle(20); // 40px diameter (Visual is ~38px)
     this.tBody.setBounce(0.5);
     this.tBody.setCollideWorldBounds(true);
@@ -177,7 +202,7 @@ class GameScene extends Phaser.Scene {
       shadow: { blur: 2, color: '#000000', fill: true }
     }).setScrollFactor(0).setDepth(100);
 
-    this.add.text(width - 20, 20, 'v1.2', {
+    this.add.text(width - 20, 20, 'v1.3', {
       fontFamily: 'Verdana', fontSize: '16px', color: '#ffffff',
       stroke: '#000000', strokeThickness: 2
     }).setScrollFactor(0).setDepth(100).setOrigin(1, 0);
@@ -191,13 +216,13 @@ class GameScene extends Phaser.Scene {
   generateUpvotes() {
     const { width, height } = this.scale;
     const startY = height - 500;
-    const endY = -50000;
-    const gap = 300;
+    const endY = -500000; // Increased height
+    const gap = 600; // Increased gap for fewer arrows
     const wallWidth = 20;
     const safePadding = 50; // Distance from wall
 
     for (let y = startY; y > endY; y -= gap) {
-      if (Math.random() > 0.4) {
+      if (Math.random() > 0.5) { // Lower probability
         const isLeft = Math.random() > 0.5;
         // Place safely away from walls
         const x = isLeft ? (wallWidth + safePadding) : (width - wallWidth - safePadding);
@@ -237,14 +262,38 @@ class GameScene extends Phaser.Scene {
       this.tBody.setVelocityY(currentVel - 800);
     }
 
+    // Apply Angled Boost (Kick across screen)
+    if (upvote.x < this.scale.width / 2) {
+      // Left Arrow -> Kick Right
+      this.tBody.setVelocityX(400);
+    } else {
+      // Right Arrow -> Kick Left
+      this.tBody.setVelocityX(-400);
+    }
+
+    // Floating Score Effect
+    const scorePopup = this.add.text(upvote.x, upvote.y, '+1', {
+      fontFamily: 'Verdana', fontSize: '24px', color: '#FF4500', fontStyle: 'bold'
+    });
+    this.tweens.add({
+      targets: scorePopup,
+      y: upvote.y - 50,
+      alpha: 0,
+      duration: 800,
+      onComplete: () => scorePopup.destroy()
+    });
+
     this.tweens.add({
       targets: upvote,
-      alpha: 0, scaleX: 2, scaleY: 2, duration: 300,
+      alpha: 0, scaleX: 1.5, scaleY: 1.5, duration: 150,
       onComplete: () => upvote.destroy()
     });
 
     this.scoreText.setTint(0xFF4500);
-    this.time.delayedCall(300, () => this.scoreText.clearTint());
+    this.time.delayedCall(150, () => this.scoreText.clearTint());
+
+    // Small screen shake for feedback
+    this.cameras.main.shake(100, 0.005);
   }
 
   override update(_time: number, _delta: number) {
@@ -289,11 +338,14 @@ class GameScene extends Phaser.Scene {
       }
 
       if (this.tBody.blocked.down) {
-        this.tBody.setDragX(500);
         if (Math.abs(this.tBody.velocity.y) < 10 && Math.abs(this.tBody.velocity.x) < 10) {
           this.gameOver();
         }
       } else {
+        // Just landed?
+        if (this.tBody.velocity.y === 0 && this.tBody.bottom >= (this.physics.world.bounds.bottom - 1)) {
+          // Impact shake if falling fast? (Hard to detect here without prev velocity, but safe to ignore for now)
+        }
         this.tBody.setDragX(0);
       }
     }
@@ -316,7 +368,9 @@ class GameScene extends Phaser.Scene {
     const vx = Math.cos(this.angleVal - Math.PI / 2) * this.power;
     const vy = Math.sin(this.angleVal - Math.PI / 2) * this.power;
     this.tBody.setVelocity(vx, vy);
-    this.cameras.main.startFollow(this.troll, true, 0, 0.5);
+    this.tBody.setVelocity(vx, vy);
+    // Smooth camera follow
+    this.cameras.main.startFollow(this.troll, true, 0.1, 0.1);
     this.trollParticles.start();
   }
 
@@ -347,7 +401,7 @@ const config: Phaser.Types.Core.GameConfig = {
   width: window.innerWidth,
   height: window.innerHeight,
   parent: 'game-container',
-  backgroundColor: '#87CEEB',
+  backgroundColor: '#1A1A1B', // Reddit Dark Base
   physics: {
     default: 'arcade',
     arcade: {
