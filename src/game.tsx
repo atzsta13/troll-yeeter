@@ -230,7 +230,7 @@ class GameScene extends Phaser.Scene {
       shadow: { blur: 2, color: '#000000', fill: true }
     }).setScrollFactor(0).setDepth(100);
 
-    this.add.text(width - 20, 20, 'v1.4', {
+    this.add.text(width - 20, 20, 'v2.0', {
       fontFamily: 'Verdana', fontSize: '16px', color: '#ffffff',
       stroke: '#000000', strokeThickness: 2
     }).setScrollFactor(0).setDepth(100).setOrigin(1, 0);
