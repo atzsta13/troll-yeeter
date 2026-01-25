@@ -75,25 +75,45 @@ class GameScene extends Phaser.Scene {
         text.destroy();
       }
     };
-    generateEmojiTexture('mod_texture', '🛡️'); // Shield for Mod
-    generateEmojiTexture('troll_texture', '🌚'); // Dark moon face for Troll? Or keeps existing. Let's try to match User request for "Reddit themed" -> Maybe just stick to the classic Troll for now but polished. '🧌' is fine.
-    // generateEmojiTexture('troll_texture', '🧌'); 
-    // Actually, let's use the default troll but maybe adding a circle bg in the sprite creation.
+    generateEmojiTexture('troll_texture', '🧌');
+    generateEmojiTexture('star_texture', '✨', '32px');
+    generateEmojiTexture('cloud_texture', '☁️', '128px');
 
-    // Let's stick to the emojis but update the upvote
-    if (!this.textures.exists('key_troll_base')) {
-      generateEmojiTexture('key_troll_base', '🧌');
+    // Generate Snoo Texture (Vector)
+    if (!this.textures.exists('snoo_texture')) {
+      const graphics = this.make.graphics({ x: 0, y: 0 }, false);
+
+      // Body (White Oval)
+      graphics.fillStyle(0xFFFFFF, 1);
+      graphics.fillEllipse(32, 50, 40, 30);
+
+      // Head (White Ellipse)
+      graphics.fillEllipse(32, 25, 50, 35);
+
+      // Eyes (Red Circles)
+      graphics.fillStyle(0xFF4500, 1);
+      graphics.fillCircle(22, 25, 4);
+      graphics.fillCircle(42, 25, 4);
+
+      // Antenna
+      graphics.lineStyle(3, 0xFFFFFF, 1);
+      graphics.beginPath();
+      graphics.moveTo(32, 10);
+      graphics.lineTo(40, -5);
+      graphics.lineTo(48, 2);
+      graphics.strokePath();
+      graphics.fillStyle(0xFFFFFF, 1);
+      graphics.fillCircle(48, 2, 4);
+
+      graphics.generateTexture('snoo_texture', 64, 80);
+      graphics.destroy();
     }
-
-    generateEmojiTexture('star_texture', '⬆️', '32px'); // Upvote particles? Or stars are fine.
-    generateEmojiTexture('cloud_texture', '💬', '128px'); // Comment bubbles as clouds
 
     if (!this.textures.exists('upvote_texture')) {
       const graphics = this.make.graphics({ x: 0, y: 0 }, false);
-      // Reddit Orange Upvote
       graphics.fillStyle(0xFF4500, 1);
+      graphics.lineStyle(4, 0xFFFFFF, 1);
       graphics.beginPath();
-      // Cleaner arrow shape
       graphics.moveTo(0, 30);
       graphics.lineTo(32, 0);
       graphics.lineTo(64, 30);
@@ -103,12 +123,8 @@ class GameScene extends Phaser.Scene {
       graphics.lineTo(16, 30);
       graphics.closePath();
       graphics.fillPath();
-
-      // Add a soft glow?
-      // Phaser graphics doesn't do blur easily without shaders/textures. 
-      // We'll trust the color to pop.
-
-      graphics.generateTexture('upvote_texture', 64, 64);
+      graphics.strokePath();
+      graphics.generateTexture('upvote_texture', 64, 66);
       graphics.destroy();
     }
   }
@@ -159,20 +175,31 @@ class GameScene extends Phaser.Scene {
     this.physics.world.checkCollision.right = true;
     this.physics.world.gravity.y = 400;
 
-    // Actors
-    // Mod sits on floor. Floor top is (height - floorHeight). Mod origin is center. Mod height 60.
-    // Y = (height - floorHeight) - 30.
-    const platformY = height - floorHeight;
-    const modY = platformY - 30; // 30 is half of 60px height
+    // --- Pedestal ---
+    const pedHeight = 100;
+    const pedWidth = 60;
+    const pedY = height - floorHeight - pedHeight;
 
-    this.mod = this.add.rectangle(width / 2, modY, 40, 60, 0x000000, 0);
-    this.add.sprite(width / 2, modY, 'mod_texture').setScale(0.8);
+    // Draw Pedestal
+    const pedGraphics = this.add.graphics();
+    pedGraphics.fillStyle(0x88CCFF, 1); // Lighter Ice
+    pedGraphics.lineStyle(2, 0xFFFFFF, 1); // White rim
+    pedGraphics.fillRect((width / 2) - (pedWidth / 2), pedY, pedWidth, pedHeight);
+    pedGraphics.strokeRect((width / 2) - (pedWidth / 2), pedY, pedWidth, pedHeight);
+    pedGraphics.setDepth(5);
+
+    // --- Actors ---
+    // Mod (Snoo) sits on top of pedestal.
+    // Pedestal Top = pedY.
+    const modY = pedY - 30; // 30 (half snoo texture height approx) offset
+
+    this.mod = this.add.rectangle(width / 2, modY, 40, 60, 0x000000, 0); // Phys Anchor
+    this.add.sprite(width / 2, modY, 'snoo_texture').setScale(0.8).setDepth(20); // Visual
     this.physics.add.existing(this.mod, true);
 
     // Troll
-    // Troll
-    this.troll = this.physics.add.sprite(width / 2, modY, 'key_troll_base').setScale(0.6);
-    this.tBody.setCircle(20); // 40px diameter (Visual is ~38px)
+    this.troll = this.physics.add.sprite(width / 2, modY, 'troll_texture').setScale(0.6).setDepth(15);
+    this.tBody.setCircle(20);
     this.tBody.setBounce(0.5);
     this.tBody.setCollideWorldBounds(true);
     this.tBody.setAllowGravity(false);
@@ -190,6 +217,7 @@ class GameScene extends Phaser.Scene {
     this.trollParticles.stop();
 
     this.rope = this.add.graphics();
+    this.rope.setDepth(18); // Rope behind snoo but in front of bg
 
     // Upvotes
     this.upvotes = this.physics.add.group();
@@ -202,7 +230,7 @@ class GameScene extends Phaser.Scene {
       shadow: { blur: 2, color: '#000000', fill: true }
     }).setScrollFactor(0).setDepth(100);
 
-    this.add.text(width - 20, 20, 'v1.3', {
+    this.add.text(width - 20, 20, 'v1.4', {
       fontFamily: 'Verdana', fontSize: '16px', color: '#ffffff',
       stroke: '#000000', strokeThickness: 2
     }).setScrollFactor(0).setDepth(100).setOrigin(1, 0);
