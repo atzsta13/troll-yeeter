@@ -13,14 +13,18 @@
 
 ### 1. The Actors
 - **The Mod (Anchor)**:
-  - **Visual**: Blue Rectangle (30x50px).
+  - **Visual**: Snoo Head (vector graphic) on a pedestal.
   - **Position**: Fixed at `{ x: width/2, y: height - 100 }`.
-  - **Role**: Static anchor point for the swinging mechanic.
+  - **Mechanic**: Winds up a "Snoo Arm" (cartoon tapered polygon) to throw.
 
 - **The Troll (Projectile)**:
-  - **Visual**: Red Circle (radius 15px).
-  - **Physics**: Arcade Body (Circle), Bounce 0.5.
+  - **Visual**: Troll Emoji 🧌 (Sprite).
+  - **Physics**: Arcade Body (Circle 20px), Bounce 0.5.
   - **Role**: The entity being yeeted.
+
+- **Upvotes (Boosters)**:
+  - **Visual**: Orange arrows.
+  - **Effect**: Boosts vertical velocity (-1400) and kicks horizontally (+/- 500) off walls.
 
 ### 2. State Machine
 The game logic is strictly controlled by a 3-state machine:
@@ -38,25 +42,50 @@ The game logic is strictly controlled by a 3-state machine:
   y = mod.y + Math.sin(angle) * 100;
   ```
 - **Launch (Yeet)**:
-  - Tangential Velocity: The troll must fly perpendicular to the rope.
+  - Tangential Velocity: The troll must fly perpendicular to the arm.
   - Formula:
     ```javascript
     vx = Math.cos(angle - PI/2) * power;
     vy = Math.sin(angle - PI/2) * power;
     ```
-  - **Power**: 1500 (High velocity).
+  - **Power**: 1200 (Balanced for mobile responsiveness).
 
-### 4. Camera Behavior
-- Camera follows the Troll vertically via `startFollow`.
-- Focus is on tracking the ascent.
-- On falling to the ground (velocity ~0), the camera resets to the start position.
+### 4. Camera & Environment
+- **Look Ahead**: Camera offset by 150px vertically to show upcoming targets.
+- **Zones**: 
+    - 0-2000: City (Normal grav)
+    - 2000-5000: Stratosphere (Mild grav)
+    - 5000-10000: Space (Low grav)
+    - 10000+: Beyond (Zero-G feel + 2x multiplier)
 
-### 5. Scoring
-- **Score calculation**: `(MaxHeight - CurrentHeight) / 10`.
-- Displayed in the top-left corner.
+### 5. Scoring & Progression
+- **Score calculation**: `(Total Height Traversed / 10) * ZoneMultiplier`.
+- **Ranks**:
+    - < 500: Lurker 😐
+    - < 1500: Reposter ♻️
+    - < 3000: Karma Farmer 🚜
+    - < 6000: Front Page 🚀
+    - < 10000: Gilded Legend 💎
+    - 20000+: GOD MODE 🧌
+
+## Juice & Polish
+- **Visuals**:
+    - Friendly Sky Blue -> Space Darkness gradient.
+    - Particle trails (Stars/Sparkles).
+    - Camera Flash & Shake on major impact (Yeet).
+- **Audio**:
+    - Custom `Synth` class using Web Audio API.
+    - Procedural SFX for Launch, Wall Kick, Boost, and Game Over.
+
+## Connectivity
+- **Leaderboards**:
+    - Backend: tRPC router `leaderboard`.
+    - Storage: Redis Sorted Sets (`global_leaderboard`).
+    - Flow: Submit on Game Over -> Fetch Top 5 -> Display.
 
 ## Future Improvements
-- [ ] Add "Boosts" or obstacles in the air.
-- [ ] Persistent High Score (saved to Reddit/Redis).
-- [ ] Visual polish (particles on launch, trail renderer).
-- [ ] Sound effects (Title music, "Yeet" sound).
+- [x] Add "Boosts" or obstacles in the air.
+- [x] Persistent High Score (saved to Reddit/Redis).
+- [x] Visual polish (particles on launch, trail renderer).
+- [x] Sound effects (Title music, "Yeet" sound).
+- [ ] Cosmetic Skins.

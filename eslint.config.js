@@ -25,7 +25,10 @@ export default defineConfig([
     ignores: ['src/server/**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2023,
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        __APP_VERSION__: 'readonly',
+      },
       parserOptions: {
         project: ['./tools/tsconfig.client.json'],
         tsconfigRootDir: import.meta.dirname,

@@ -1,31 +1,22 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 let requestExpandedModeMock: ReturnType<typeof vi.fn>;
-let navigateToMock: ReturnType<typeof vi.fn>;
 
 vi.mock('@devvit/web/client', () => {
   requestExpandedModeMock = vi.fn();
-  navigateToMock = vi.fn();
 
   return {
-    // used in the footer
-    navigateTo: navigateToMock,
-    // used in the greeting
-    context: {
-      username: 'test-user',
-    },
-    // used by the "Tap to Start" button
+    // used by the "YEET!" button
     requestExpandedMode: requestExpandedModeMock,
   };
 });
 
 afterEach(() => {
   requestExpandedModeMock?.mockReset();
-  navigateToMock?.mockReset();
 });
 
 describe('Splash', () => {
-  it('clicking the "Docs" footer button calls navigateTo(...)', async () => {
+  it('clicking the "YEET!" button calls requestExpandedMode(...)', async () => {
     document.body.innerHTML = '<div id="root"></div>';
 
     // `src/splash.tsx` renders immediately on import (createRoot(...).render(...))
@@ -34,16 +25,13 @@ describe('Splash', () => {
     // Let React commit the initial render.
     await new Promise((r) => setTimeout(r, 0));
 
-    const docsButton = Array.from(document.querySelectorAll('button')).find(
-      (b) => /docs/i.test(b.textContent ?? '')
+    const yeetButton = Array.from(document.querySelectorAll('button')).find(
+      (b) => /yeet/i.test(b.textContent ?? '')
     );
-    expect(docsButton).toBeTruthy();
+    expect(yeetButton).toBeTruthy();
 
-    docsButton!.click();
+    yeetButton!.click();
 
-    expect(navigateToMock).toHaveBeenCalledTimes(1);
-    expect(navigateToMock).toHaveBeenCalledWith(
-      'https://developers.reddit.com/docs'
-    );
+    expect(requestExpandedModeMock).toHaveBeenCalledTimes(1);
   });
 });

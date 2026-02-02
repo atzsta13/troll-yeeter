@@ -1,6 +1,13 @@
 import { defineConfig } from 'vitest/config';
+import fs from 'fs';
+import path from 'path';
+
+const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8'));
 
 export default defineConfig({
+  define: {
+    '__APP_VERSION__': JSON.stringify(packageJson.version),
+  },
   test: {
     // Needed due to the custom conditions within devvit web
     typecheck: {
@@ -14,6 +21,9 @@ export default defineConfig({
     },
     projects: [
       {
+        define: {
+          '__APP_VERSION__': JSON.stringify(packageJson.version),
+        },
         test: {
           name: 'server',
           include: ['src/server/**/*.test.ts'],
@@ -21,6 +31,9 @@ export default defineConfig({
         },
       },
       {
+        define: {
+          '__APP_VERSION__': JSON.stringify(packageJson.version),
+        },
         test: {
           name: 'client',
           include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
